@@ -16,6 +16,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      # Blocking: a rendering/caching misconfiguration fails at build time, and
+      # until now `next build` only ran inside the non-blocking e2e job below —
+      # so it could ship green. `next build` also typechecks.
+      - run: npm run build
 
   # Non-blocking smoke suite — informational until Nico opts into gating on it.
   e2e-smoke:

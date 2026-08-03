@@ -18,7 +18,16 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    // Mints the session row once, serially, before anything else runs. Doing it
+    // per-test raced the server for the SQLite write lock (SQLITE_BUSY).
+    { name: "setup", testMatch: /.*\.setup\.ts/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
+    },
+  ],
   webServer: {
     // A production build, not `next dev`: Next refuses to run two dev servers in
     // one directory, so dev-mode e2e would fail whenever someone has the app
