@@ -33,7 +33,9 @@ function weekLabel(iso: string): string {
 const actLink =
   "font-mono text-[0.66rem] tracking-[0.08em] uppercase text-neutral-600 underline decoration-neutral-300 underline-offset-4 hover:text-neutral-900 hover:decoration-neutral-500";
 
-export const revalidate = 86400;
+// `export const revalidate = 86400` lived here but was inert — the page reads
+// cookies() below, which forced dynamic rendering regardless. cacheComponents
+// rejects the segment config outright; per-scope cacheLife replaces it.
 
 export function generateStaticParams() {
   return projects.map((p) => ({ slug: p.slug }));

@@ -1,11 +1,19 @@
 import { ImageResponse } from "next/og";
+import { cacheLife } from "next/cache";
 import { site } from "@/content/site";
 
 export const alt = site.footerTagline;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// 'use cache' keeps this route prerendered. Without it the two font fetches are
+// uncached runtime data under cacheComponents, which demoted the card from
+// static to per-request — an external Google Fonts round-trip on every social
+// scrape. Fonts are immutable, so the longest profile is right.
 async function loadGoogleFont(family: string, weight: number) {
+  "use cache";
+  cacheLife("max");
+
   const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
     family,
   )}:wght@${weight}&display=swap`;

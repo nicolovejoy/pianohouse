@@ -12,7 +12,10 @@ import { db } from "@/lib/db";
 // and polling someone else's API every 5 minutes is cost plus coupling),
 // Resend (send-only, no read probe without a side effect).
 
-export const dynamic = "force-dynamic";
+// No `export const dynamic` — cacheComponents rejects the segment config, and
+// it is redundant under it: this handler reads req.nextUrl.searchParams, which
+// is runtime data, so it runs per request. Cache-Control: no-store below is
+// what actually keeps monitors from being served a cached 200.
 
 type Check = { name: string; ok: boolean; ms: number; error?: string };
 
