@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 
@@ -96,7 +97,12 @@ export async function createSession(userId: string): Promise<void> {
   });
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+/**
+ * Memoized per request: nav and the page body both resolve the session, and
+ * the cookie holds an opaque token, so every call is a remote Turso round-trip.
+ * Without this, a signed-in render of /projects/[slug] pays for two.
+ */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null; // anonymous visitors never hit the DB
@@ -119,7 +125,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     console.error("[auth] session lookup failed", err);
     return null; // misconfigured DB → treat as logged out, don't crash the page
   }
-}
+});
 
 export async function destroySession(): Promise<void> {
   const jar = await cookies();

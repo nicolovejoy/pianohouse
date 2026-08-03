@@ -16,7 +16,7 @@
     "db:seed": "node --env-file=.env.local scripts/seed-dev.mjs"
   },
   "simple-git-hooks": {
-    "pre-push": "npm run check"
+    "pre-push": "npm run check && npm run build"
   },
   "dependencies": {
     "@libsql/client": "0.17.3",
