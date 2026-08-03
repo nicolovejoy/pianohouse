@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import buildInfo from "@/lib/build-info.json";
 import { site } from "@/content/site";
@@ -31,9 +32,65 @@ const links = [
   { href: "/connect", label: site.navLabels.connect },
 ];
 
-export async function Nav() {
+/**
+ * The session-dependent slice of the desktop nav. It is the ONLY reason any
+ * route in this app was dynamic — Nav renders in the root layout, so the
+ * cookie read at lib/auth.ts propagated to all 13 page routes (#19). Behind a
+ * Suspense boundary it becomes a dynamic hole in an otherwise static shell.
+ */
+async function SessionSlot() {
   const user = await getSessionUser();
 
+  if (!user) {
+    return (
+      <li>
+        <Link href="/signin" className="font-medium text-neutral-800 hover:text-neutral-950">
+          {site.navLabels.signIn}
+        </Link>
+      </li>
+    );
+  }
+
+  return (
+    <>
+      <li className="flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 py-1 pl-1 pr-3">
+        <span
+          aria-hidden
+          className="flex size-6 items-center justify-center rounded-full bg-neutral-900 text-[11px] font-semibold text-white"
+        >
+          {(user.name ?? user.email)[0].toUpperCase()}
+        </span>
+        <span className="max-w-[10rem] truncate font-medium text-neutral-800">
+          {user.name ?? user.email}
+        </span>
+      </li>
+      <li>
+        <form action="/api/auth/signout" method="post">
+          <button type="submit" className="hover:text-neutral-900">
+            sign out
+          </button>
+        </form>
+      </li>
+    </>
+  );
+}
+
+/**
+ * Reserves the chip's height so the shell doesn't shift when the slot resolves.
+ * Deliberately not a "sign in" link: that would be wrong for signed-in readers
+ * and would flash before correcting itself.
+ */
+function SessionSlotFallback() {
+  return <li aria-hidden className="h-8 w-20" />;
+}
+
+/** Same boundary for the phone nav, which also branches on the session. */
+async function MobileSlot() {
+  const user = await getSessionUser();
+  return <MobileMenu links={links} signInLabel={site.navLabels.signIn} user={user} />;
+}
+
+export function Nav() {
   return (
     <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/90 backdrop-blur">
       <nav className="relative mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
@@ -60,40 +117,16 @@ export async function Nav() {
               <GitHubMark className="size-4" />
             </a>
           </li>
-          {user ? (
-            <>
-              <li className="flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 py-1 pl-1 pr-3">
-                <span
-                  aria-hidden
-                  className="flex size-6 items-center justify-center rounded-full bg-neutral-900 text-[11px] font-semibold text-white"
-                >
-                  {(user.name ?? user.email)[0].toUpperCase()}
-                </span>
-                <span className="max-w-[10rem] truncate font-medium text-neutral-800">
-                  {user.name ?? user.email}
-                </span>
-              </li>
-              <li>
-                <form action="/api/auth/signout" method="post">
-                  <button type="submit" className="hover:text-neutral-900">
-                    sign out
-                  </button>
-                </form>
-              </li>
-            </>
-          ) : (
-            <li>
-              <Link
-                href="/signin"
-                className="font-medium text-neutral-800 hover:text-neutral-950"
-              >
-                {site.navLabels.signIn}
-              </Link>
-            </li>
-          )}
+          <Suspense fallback={<SessionSlotFallback />}>
+            <SessionSlot />
+          </Suspense>
         </ul>
 
-        <MobileMenu links={links} signInLabel={site.navLabels.signIn} user={user} />
+        <Suspense
+          fallback={<MobileMenu links={links} signInLabel={site.navLabels.signIn} user={null} />}
+        >
+          <MobileSlot />
+        </Suspense>
       </nav>
     </header>
   );
